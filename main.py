@@ -12,7 +12,7 @@ from tools.tts import UlutTTS
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAI_CHAT_MODEL = os.getenv("OPENAI_MODEL")
+OPENAI_CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL")
 OPENAI_IS_STREAM = eval(os.getenv("OPENAI_IS_STREAM"))
 
 client = OpenAI(api_key=OPENAI_API_KEY)
@@ -65,6 +65,7 @@ class UserRequest(BaseModel):
 @app.post('/ask')
 async def ask(request: UserRequest):
     try:
+        print(request)
         if request.is_stream:
             result = generate_streamed(request.text, request.is_stream)
             return StreamingResponse(result)
