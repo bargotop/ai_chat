@@ -1,2 +1,6 @@
 fastapi==0.109.2
 # pip install "uvicorn[standard]"
+pydantic==2.6.1
+openai==1.12.0
+python-dotenv==1.0.1
+requests==2.31.0
