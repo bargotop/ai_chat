@@ -1,0 +1,2 @@
+fastapi==0.109.2
+# pip install "uvicorn[standard]"
