@@ -122,7 +122,6 @@ async def generate_streamed(text: str, is_stream: bool):
         chunk: ChatCompletionChunk
         if chunk.choices[0].finish_reason is None:
             part_result = chunk.choices[0].delta.content
-            print(part_result, end=" ")
             yield part_result
         else:
             yield ''
