@@ -99,7 +99,7 @@ async def generate_streamed(text: str, is_stream: bool):
             part_result = chunk.choices[0].delta.content
             yield part_result
         else:
-            yield 'None'
+            yield ''
 
 
 async def generate(text: str, is_stream: bool):
