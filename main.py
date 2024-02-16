@@ -4,9 +4,12 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, WebSocket
 from fastapi.responses import StreamingResponse, Response
+
 from openai import OpenAI
 from openai.types.chat import ChatCompletionChunk
 from pydantic import BaseModel, conint
+from fastapi.middleware.cors import CORSMiddleware
+
 from tools.tts import UlutTTS
 from fp.fp import FreeProxy
 import httpx
@@ -28,7 +31,22 @@ client = OpenAI(
         verify=False
     )
 )
+origins = [
+    "http://localhost",
+    "https://localhost",
+    "http://localhost:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get('/chunked')
@@ -93,12 +111,18 @@ async def ask(request: UserRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.options("/ask", status_code=200)
+def options_ask():
+    return {"method": "OPTIONS"}
+
+
 async def generate_streamed(text: str, is_stream: bool):
     response = await get_chat_response(text, is_stream)
     for chunk in response:
         chunk: ChatCompletionChunk
         if chunk.choices[0].finish_reason is None:
             part_result = chunk.choices[0].delta.content
+            print(part_result, end=" ")
             yield part_result
         else:
             yield ''
