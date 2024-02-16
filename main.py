@@ -22,18 +22,12 @@ OPENAI_IS_STREAM = eval(os.getenv("OPENAI_IS_STREAM"))
 client = OpenAI(
     api_key=OPENAI_API_KEY
 )
-origins = [
-    "http://localhost",
-    "https://localhost",
-    "http://localhost:3000",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-]
+
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # Можете указать конкретные домены
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
