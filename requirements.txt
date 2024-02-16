@@ -6,3 +6,5 @@ python-dotenv==1.0.1
 requests==2.31.0
 websockets==12.0
 uvicorn==0.27.1
+free-proxy==1.1.1
+httpx==0.26.0

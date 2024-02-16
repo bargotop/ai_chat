@@ -8,14 +8,24 @@ from openai import OpenAI
 from openai.types.chat import ChatCompletionChunk
 from pydantic import BaseModel, conint
 from tools.tts import UlutTTS
+from fp.fp import FreeProxy
+import httpx
+
 
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL")
 OPENAI_IS_STREAM = eval(os.getenv("OPENAI_IS_STREAM"))
+proxy = FreeProxy(country_id=['US', 'BR']).get()
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = OpenAI(
+    api_key=OPENAI_API_KEY,
+    http_client=httpx.Client(
+        proxies=proxy,
+        verify=False
+    )
+)
 app = FastAPI()
 
 
@@ -65,7 +75,6 @@ class UserRequest(BaseModel):
 @app.post('/ask')
 async def ask(request: UserRequest):
     try:
-        print(request)
         if request.is_stream:
             result = generate_streamed(request.text, request.is_stream)
             return StreamingResponse(result)
@@ -78,7 +87,7 @@ async def ask(request: UserRequest):
             }
 
     except Exception as e:
-        print(e)
+        print(f"Exception: {e=}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
