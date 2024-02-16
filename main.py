@@ -17,8 +17,9 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL")
 OPENAI_IS_STREAM = eval(os.getenv("OPENAI_IS_STREAM"))
-proxy = FreeProxy(country_id=['US', 'UK', 'NL', 'DE', 'FR', 'ES', 'PT', 'CH']).get()
-print(f"{proxy=}")
+# proxy = FreeProxy(country_id=['US', 'UK', 'NL', 'DE', 'FR', 'ES', 'PT']).get()
+# proxy = FreeProxy(rand=True).get()
+proxy = os.getenv("PROXY")
 
 client = OpenAI(
     api_key=OPENAI_API_KEY,
