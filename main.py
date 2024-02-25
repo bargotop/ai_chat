@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 from typing import AsyncGenerator
 
@@ -10,6 +11,7 @@ from openai import OpenAI
 from openai.types.chat import ChatCompletionChunk
 from pydantic import BaseModel, conint
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.websockets import WebSocketDisconnect
 
 from tools.tts import UlutTTS
 
@@ -60,6 +62,51 @@ async def websocket_endpoint(websocket: WebSocket):
         result = generate_streamed(data, is_stream=True)
         async for chunk in result:
             await websocket.send_text(chunk)
+
+
+connected_clients = []
+all_clients_username = []
+all_clients_websocket = []
+# Очередь сообщений
+message_queue = []
+
+
+# WebSocket для веб-интерфейса чата
+@app.websocket("/ws/chat")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    username = f'user{len(all_clients_username)+1}'
+    all_clients_username.append(username)
+    all_clients_websocket.append(websocket)
+    # Добавляем клиента в список подключенных
+    connected_clients.append({"websocket": websocket, "username": username})
+    # Приветственное сообщение для нового клиента
+    message = {
+        'user': 'bot',
+        'message': f"Привет, {username}! Добро пожаловать в чат Otus!"
+    }
+    await websocket.send_text(json.dumps(message))
+
+    # Отправляем сообщения из очереди (если они есть)
+    for message in message_queue:
+        await websocket.send_text(json.dumps(message))
+
+    try:
+        while True:
+            data = await websocket.receive_text()
+            json_data = json.loads(data)
+            message = {
+                'user': all_clients_username[all_clients_websocket.index(websocket)],
+                'message': json_data.get('message')
+            }
+            # Добавляем сообщение в очередь
+            message_queue.append(message)
+            # Отправляем сообщение всем подключенным клиентам
+            for client in connected_clients:
+                await client["websocket"].send_text(json.dumps(message))
+    except WebSocketDisconnect:
+        # Удаляем клиента из списка при отключении
+        connected_clients.remove({"websocket": websocket, "username": username})
 
 
 class TTSRequest(BaseModel):
