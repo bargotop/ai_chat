@@ -1,5 +1,6 @@
 import asyncio
 import os
+from typing import AsyncGenerator
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, WebSocket, Depends
@@ -105,12 +106,13 @@ def options_ask():
     return {"method": "OPTIONS"}
 
 
-async def generate_streamed(text: str, is_stream: bool):
+async def generate_streamed(text: str, is_stream: bool) -> AsyncGenerator[str, None]:
     response = await get_chat_response(text, is_stream)
     for chunk in response:
         chunk: ChatCompletionChunk
         if chunk.choices[0].finish_reason is None:
             part_result = chunk.choices[0].delta.content
+            await asyncio.sleep(0.01)
             yield part_result
         else:
             yield ''
