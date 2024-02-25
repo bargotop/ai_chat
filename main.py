@@ -1,7 +1,7 @@
 import asyncio
 import json
 import os
-from typing import AsyncGenerator
+from typing import AsyncGenerator, List
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, WebSocket, Depends
@@ -64,7 +64,22 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.send_text(chunk)
 
 
-connected_clients = []
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections:
+            await connection.send_text(json.dumps(message))
+
+manager = ConnectionManager()
 all_clients_username = []
 all_clients_websocket = []
 # Очередь сообщений
@@ -74,12 +89,11 @@ message_queue = []
 # WebSocket для веб-интерфейса чата
 @app.websocket("/ws/chat")
 async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
+    await manager.connect(websocket)
     username = f'user{len(all_clients_username)+1}'
     all_clients_username.append(username)
     all_clients_websocket.append(websocket)
     # Добавляем клиента в список подключенных
-    connected_clients.append({"websocket": websocket, "username": username})
     # Приветственное сообщение для нового клиента
     message = {
         'user': 'bot',
@@ -94,19 +108,27 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
-            json_data = json.loads(data)
-            message = {
-                'user': all_clients_username[all_clients_websocket.index(websocket)],
-                'message': json_data.get('message')
-            }
-            # Добавляем сообщение в очередь
-            message_queue.append(message)
-            # Отправляем сообщение всем подключенным клиентам
-            for client in connected_clients:
-                await client["websocket"].send_text(json.dumps(message))
+            try:
+                json_data = json.loads(data)
+            except json.JSONDecodeError:
+                json_data = {}
+
+            if json_data.get('is_typing') is True:
+                await manager.broadcast({
+                    'user': all_clients_username[all_clients_websocket.index(websocket)],
+                    'message': '',
+                    'is_typing': True
+                })
+            else:
+                message = {
+                    'user': all_clients_username[all_clients_websocket.index(websocket)],
+                    'message': json_data.get('message')
+                }
+                message_queue.append(message)
+                await manager.broadcast(message)
     except WebSocketDisconnect:
         # Удаляем клиента из списка при отключении
-        connected_clients.remove({"websocket": websocket, "username": username})
+        manager.disconnect(websocket)
 
 
 class TTSRequest(BaseModel):
