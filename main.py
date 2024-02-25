@@ -83,7 +83,7 @@ class UserRequest(BaseModel):
 
 
 @app.post('/ask')
-async def ask(request: UserRequest, websocket: WebSocket):
+async def ask(request: UserRequest):
     try:
         if request.is_stream:
             result = generate_streamed(request.text, request.is_stream)
