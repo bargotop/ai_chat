@@ -2,7 +2,7 @@ import asyncio
 import os
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, WebSocket
+from fastapi import FastAPI, HTTPException, WebSocket, Depends
 from fastapi.responses import StreamingResponse, Response
 
 from openai import OpenAI
@@ -11,7 +11,6 @@ from pydantic import BaseModel, conint
 from fastapi.middleware.cors import CORSMiddleware
 
 from tools.tts import UlutTTS
-
 
 load_dotenv()
 
@@ -27,7 +26,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Можете указать конкретные домены
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -52,9 +51,14 @@ async def websocket_endpoint(websocket: WebSocket):
     while True:
         data = await websocket.receive_text()
 
-        if data:
-            async for part_result in generate_streamed(data, True):
-                await websocket.send_text(part_result)
+        if data == 'close':
+            break
+        # if data:
+        #     async for part_result in generate_streamed(data, True):
+        #         await websocket.send_text(part_result)
+        result = generate_streamed(data, is_stream=True)
+        async for chunk in result:
+            await websocket.send_text(chunk)
 
 
 class TTSRequest(BaseModel):
@@ -78,7 +82,7 @@ class UserRequest(BaseModel):
 
 
 @app.post('/ask')
-async def ask(request: UserRequest):
+async def ask(request: UserRequest, websocket: WebSocket):
     try:
         if request.is_stream:
             result = generate_streamed(request.text, request.is_stream)
